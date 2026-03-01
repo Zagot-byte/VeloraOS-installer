@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║    Velora OS — Stage 1: User Input Collection                   ║
+# ║    Velora OS — Stage 1: User Input Collection                    ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 keyboard_selector () {

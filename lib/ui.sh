@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║         Velora OS — Pure-Bash ANSI TUI Library                  ║
-# ║         No whiptail. No dialog. Just terminal art.              ║
+# ║         Velora OS — Pure-Bash ANSI TUI Library                   ║
+# ║         No whiptail. No dialog. Just terminal art.               ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 # ─── Color & Style Constants ─────────────────────────────────────────────────

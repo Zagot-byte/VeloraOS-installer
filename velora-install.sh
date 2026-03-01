@@ -1,8 +1,8 @@
 #!/usr/bin/env -S bash -e
 # shellcheck disable=SC2001
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║         Velora OS Installer — Main Entry Point                  ║
-# ║         Pure-bash ANSI TUI — no whiptail, no dialog            ║
+# ║         Velora OS Installer — Main Entry Point                   ║
+# ║         Pure-bash ANSI TUI — no whiptail, no dialog              ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

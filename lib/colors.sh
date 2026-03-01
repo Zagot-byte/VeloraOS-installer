@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║    Velora OS — Color palette & print helpers                    ║
+# ║    Velora OS — Color palette & print helpers                     ║ 
 # ╚══════════════════════════════════════════════════════════════════╝
 # NEWT_COLORS removed — whiptail is no longer used.
 # True-color sequences are defined in ui.sh; these are kept as

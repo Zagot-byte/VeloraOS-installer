@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║    Velora OS — Checkpoint system (crash recovery)               ║
+# ║    Velora OS — Checkpoint system (crash recovery)                ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 CP="/tmp/velora_cp"

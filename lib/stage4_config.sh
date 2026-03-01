@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║    Velora OS — Stage 4: System Configuration (chroot)           ║
+# ║    Velora OS — Stage 4: System Configuration (chroot)            ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 stage4_config () {

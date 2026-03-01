@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║    Velora OS — Stage 3: Base System Install                     ║
+# ║    Velora OS — Stage 3: Base System Install                      ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 microcode_detector () {
