@@ -1,54 +1,61 @@
 #!/usr/bin/env bash
-# Robrum OS — Stage 2: Disk Setup (with manual partitioning support)
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║    Velora OS — Stage 2: Disk Setup                              ║
+# ╚══════════════════════════════════════════════════════════════════╝
 
 stage2_disk () {
-    info_print "Stage 2: Setting up disk $DISK"
+    ui_status_info "Stage 2: Setting up disk ${DISK}"
 
-    # Ask partitioning mode
-    PART_MODE=$(whiptail --title "Robrum OS Installer" \
-        --menu "Choose partitioning mode:" 12 60 2 \
-        "auto"   "Automatic — wipe disk and partition automatically" \
-        "manual" "Manual — use cfdisk to partition yourself" \
-        3>&1 1>&2 2>&3) || return 1
+    # ── Partitioning mode ────────────────────────────────────────────────────
+    if ! ui_menu "Partitioning Mode" \
+        "auto|Automatic — wipe disk and partition automatically" \
+        "manual|Manual — use cfdisk to partition yourself"; then
+        return 1
+    fi
+    PART_MODE="$REPLY"
 
     if [[ "$PART_MODE" == "manual" ]]; then
-        whiptail --title "Manual Partitioning" \
-            --msgbox "cfdisk will now open.\n\nYou must create:\n  • An EFI partition (FAT32, ~1GB, type: EFI System)\n  • A root partition (rest of disk, type: Linux filesystem)\n\nWrite and quit when done." \
-            14 60
+        # ── Manual partitioning ──────────────────────────────────────────────
+        ui_message "Manual Partitioning" \
+"cfdisk will open next. You must create:
+  •  An EFI partition (FAT32, ~1 GB, type: EFI System)
+  •  A root partition (rest of disk, type: Linux filesystem)
+Write and quit when done."
+
         cfdisk "$DISK"
         partprobe "$DISK"
 
-        # Let user pick which partitions are which
         mapfile -t PARTS < <(lsblk -pno NAME "$DISK" | tail -n +2)
         local part_menu=()
         for p in "${PARTS[@]}"; do
+            local size
             size=$(lsblk -pno SIZE "$p" | head -1)
-            part_menu+=("$p" "$size")
+            part_menu+=("${p}|${size}")
         done
 
-        ESP=$(whiptail --title "Select EFI Partition" \
-            --menu "Which partition is your EFI/boot partition?" 15 60 6 \
-            "${part_menu[@]}" 3>&1 1>&2 2>&3) || return 1
+        if ! ui_menu "Select EFI Partition" "${part_menu[@]}"; then return 1; fi
+        ESP="$REPLY"
 
-        CRYPTROOT=$(whiptail --title "Select Root Partition" \
-            --menu "Which partition is your root partition?" 15 60 6 \
-            "${part_menu[@]}" 3>&1 1>&2 2>&3) || return 1
+        if ! ui_menu "Select Root Partition" "${part_menu[@]}"; then return 1; fi
+        CRYPTROOT="$REPLY"
 
-        whiptail --title "Robrum OS Installer" \
-            --yesno "Format $ESP as FAT32?\n(Skip if already formatted)" 8 50
-        if [[ $? -eq 0 ]]; then
+        if ui_confirm "Format EFI?" "Format ${ESP} as FAT32? (Skip if already done)"; then
             mkfs.fat -F 32 "$ESP" &>/dev/null
         fi
 
     else
-        whiptail --title "WARNING" \
-            --yesno "ALL DATA ON $DISK WILL BE ERASED.\n\nAre you absolutely sure?" 10 50 || return 1
+        # ── Automatic partitioning ───────────────────────────────────────────
+        if ! ui_confirm "⚠  FINAL WARNING" \
+            "ALL DATA ON ${DISK} WILL BE PERMANENTLY ERASED. Are you sure?"; then
+            return 1
+        fi
 
-        (
-        echo "10"
+        ui_gauge_start "Partitioning Disk"
+        ui_gauge_update 10 "Wiping existing partition table..."
         wipefs -af "$DISK" &>/dev/null
         sgdisk -Zo "$DISK" &>/dev/null
-        echo "25"
+
+        ui_gauge_update 30 "Creating GPT partitions..."
         parted -s "$DISK" \
             mklabel gpt \
             mkpart ESP fat32 1MiB 1025MiB \
@@ -56,48 +63,57 @@ stage2_disk () {
             mkpart CRYPTROOT 1025MiB 100%
         partprobe "$DISK"
         sleep 1
-        echo "60"
+
+        ui_gauge_update 65 "Formatting EFI partition (FAT32)..."
         ESP="/dev/disk/by-partlabel/ESP"
         CRYPTROOT="/dev/disk/by-partlabel/CRYPTROOT"
         mkfs.fat -F 32 "$ESP" &>/dev/null
-        echo "100"
-        ) | whiptail --title "Robrum OS Installer" --gauge "Partitioning disk..." 8 60 0
+
+        ui_gauge_update 100 "Partitioning complete."
+        ui_gauge_end
 
         ESP="/dev/disk/by-partlabel/ESP"
         CRYPTROOT="/dev/disk/by-partlabel/CRYPTROOT"
     fi
 
-    # LUKS + BTRFS — same for both modes
-    (
-    echo "10"
+    # ── LUKS + BTRFS — same for both modes ──────────────────────────────────
+    ui_gauge_start "Setting Up Encryption & Filesystem"
+
+    ui_gauge_update 10 "Formatting LUKS container..."
     echo -n "$password" | cryptsetup luksFormat "$CRYPTROOT" -d - &>/dev/null
-    echo "30"
+
+    ui_gauge_update 30 "Opening LUKS container..."
     echo -n "$password" | cryptsetup open "$CRYPTROOT" cryptroot -d -
     BTRFS="/dev/mapper/cryptroot"
-    echo "45"
+
+    ui_gauge_update 45 "Creating BTRFS filesystem..."
     mkfs.btrfs "$BTRFS" &>/dev/null
     mount "$BTRFS" /mnt
-    echo "60"
-    subvols=(snapshots var_pkgs var_log home root srv)
+
+    ui_gauge_update 60 "Creating BTRFS subvolumes..."
+    local subvols=(snapshots var_pkgs var_log home root srv)
     for subvol in '' "${subvols[@]}"; do
         btrfs su cr /mnt/@"$subvol" &>/dev/null
     done
-    echo "75"
+
+    ui_gauge_update 75 "Mounting subvolumes..."
     umount /mnt
-    mountopts="ssd,noatime,compress-force=zstd:3,discard=async"
-    mount -o "$mountopts",subvol=@ "$BTRFS" /mnt
+    local mountopts="ssd,noatime,compress-force=zstd:3,discard=async"
+    mount -o "${mountopts}",subvol=@ "$BTRFS" /mnt
     mkdir -p /mnt/{home,root,srv,.snapshots,var/{log,cache/pacman/pkg},boot}
     for subvol in "${subvols[@]:2}"; do
-        mount -o "$mountopts",subvol=@"$subvol" "$BTRFS" /mnt/"${subvol//_//}"
+        mount -o "${mountopts}",subvol=@"$subvol" "$BTRFS" /mnt/"${subvol//_//}"
     done
-    echo "90"
+
+    ui_gauge_update 90 "Finalising mount points..."
     chmod 750 /mnt/root
-    mount -o "$mountopts",subvol=@snapshots "$BTRFS" /mnt/.snapshots
-    mount -o "$mountopts",subvol=@var_pkgs "$BTRFS" /mnt/var/cache/pacman/pkg
+    mount -o "${mountopts}",subvol=@snapshots "$BTRFS" /mnt/.snapshots
+    mount -o "${mountopts}",subvol=@var_pkgs  "$BTRFS" /mnt/var/cache/pacman/pkg
     chattr +C /mnt/var/log
     mount "$ESP" /mnt/boot/
-    echo "100"
-    ) | whiptail --title "Robrum OS Installer" --gauge "Setting up LUKS + BTRFS..." 8 60 0
+
+    ui_gauge_update 100 "Disk setup complete."
+    ui_gauge_end
 
     export ESP
     export CRYPTROOT

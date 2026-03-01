@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Robrum OS — Stage 3: Base System Install
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║    Velora OS — Stage 3: Base System Install                     ║
+# ╚══════════════════════════════════════════════════════════════════╝
 
 microcode_detector () {
     CPU=$(grep vendor_id /proc/cpuinfo)
@@ -44,34 +46,36 @@ virt_check () {
 stage3_install () {
     microcode_detector
 
-    (
-    echo "10" ; info_print "Running pacstrap..."
+    ui_gauge_start "Installing Base System"
+
+    ui_gauge_update 10 "Running pacstrap — this may take a while..."
     pacstrap -K /mnt base "$kernel" "$microcode" linux-firmware \
         "$kernel"-headers btrfs-progs grub grub-btrfs rsync \
         efibootmgr snapper reflector snap-pac zram-generator sudo \
         libnewt git curl &>/dev/null
 
-    echo "50" ; info_print "Setting hostname..."
+    ui_gauge_update 55 "Setting hostname: ${hostname}..."
     echo "$hostname" > /mnt/etc/hostname
 
-    echo "60" ; info_print "Generating fstab..."
+    ui_gauge_update 62 "Generating fstab..."
     genfstab -U /mnt >> /mnt/etc/fstab
 
-    echo "70" ; info_print "Setting locale and keymap..."
+    ui_gauge_update 70 "Setting locale (${locale}) and keymap (${kblayout})..."
     sed -i "/^#$locale/s/^#//" /mnt/etc/locale.gen
-    echo "LANG=$locale" > /mnt/etc/locale.conf
-    echo "KEYMAP=$kblayout" > /mnt/etc/vconsole.conf
+    echo "LANG=$locale"      > /mnt/etc/locale.conf
+    echo "KEYMAP=$kblayout"  > /mnt/etc/vconsole.conf
 
-    echo "80" ; info_print "Setting hosts file..."
+    ui_gauge_update 80 "Writing /etc/hosts..."
     cat > /mnt/etc/hosts <<EOF
 127.0.0.1   localhost
 ::1         localhost
-127.0.1.1   $hostname.localdomain   $hostname
+127.0.1.1   ${hostname}.localdomain   ${hostname}
 EOF
 
-    echo "90" ; info_print "Installing network tools..."
+    ui_gauge_update 90 "Installing network tools..."
     virt_check
     network_installer
-    echo "100"
-    ) | whiptail --title "Robrum OS Installer" --gauge "Installing base system..." 8 60 0
+
+    ui_gauge_update 100 "Base install complete."
+    ui_gauge_end
 }

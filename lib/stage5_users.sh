@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Robrum OS — Stage 5: Users & Security
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║    Velora OS — Stage 5: Users & Security                        ║
+# ╚══════════════════════════════════════════════════════════════════╝
 
 stage5_users () {
-    info_print "Stage 5: Setting up users..."
+    ui_status_info "Stage 5: Setting up users..."
 
     # Root password
     echo "root:$rootpass" | arch-chroot /mnt chpasswd
@@ -12,9 +14,12 @@ stage5_users () {
         echo "%wheel ALL=(ALL:ALL) ALL" > /mnt/etc/sudoers.d/wheel
         arch-chroot /mnt useradd -m -G wheel -s /bin/bash "$username"
         echo "$username:$userpass" | arch-chroot /mnt chpasswd
-        info_print "User $username created with sudo access."
+        ui_status_ok "User '${username}' created with sudo access."
     fi
 
-    whiptail --title "Robrum OS Installer" \
-        --msgbox "Users configured successfully." 8 40
+    ui_message "Users Configured" \
+"Users have been set up successfully.
+
+  Root password  ✔
+$(  [[ -n "$username" ]] && echo "  User: ${username}  ✔ (sudo enabled)" || echo "  No additional user created.")"
 }
